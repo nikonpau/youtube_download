@@ -44,7 +44,6 @@ def download_video():
 
     out_template = os.path.join(DOWNLOAD_FOLDER, f'%(id)s_{download_id}.%(ext)s')
 
-    # Configuración de formato según la calidad seleccionada
     if quality == '1080':
         fmt = 'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
     elif quality == '720':
@@ -62,12 +61,12 @@ def download_video():
         'progress_hooks': [lambda d: progress_hook(d, download_id)],
         'extractor_args': {
             'youtube': {
-                'player_client': ['mweb', 'ios', 'android'],
-                'skip': ['webpage']
+                'player_client': ['android', 'ios'],
+                'skip': ['webpage', 'configs']
             }
         },
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
+            'User-Agent': 'com.google.android.youtube/18.11.34 (Linux; U; Android 11; en_US) gzip',
             'Accept-Language': 'en-US,en;q=0.9',
         }
     }
@@ -94,6 +93,11 @@ def download_video():
         PROGRESS.pop(download_id, None)
         return {'error': f'Error al procesar el video: {str(e)}'}, 500
 
+# --- RUTA PARA EL SERVICE WORKER DE OUTPUSH ---
+@app.route('/sw.js')
+def service_worker():
+    return send_file('sw.js', mimetype='application/javascript')
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port)

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tubexify - Descargador de Videos HD</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #0f172a; color: #f8fafc; margin: 0; }
+        .card { background: #1e293b; padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 90%; max-width: 520px; text-align: center; border: 1px solid #334155; }
+        h1 { margin-bottom: 0.5rem; color: #f8fafc; font-size: 2rem; font-weight: 700; }
+        h1 span { color: #ff2a5f; }
+        p.subtitle { color: #94a3b8; font-size: 0.95rem; margin-bottom: 1.5rem; }
+        .input-group { display: flex; flex-direction: column; gap: 0.8rem; }
+        input[type="text"], select { width: 100%; padding: 14px; border: 1px solid #334155; border-radius: 8px; font-size: 0.95rem; outline: none; background: #0f172a; color: #fff; }
+        input[type="text"]:focus, select:focus { border-color: #ff2a5f; }
+        button { padding: 14px; background: linear-gradient(135deg, #ff2a5f, #d90429); color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: 600; transition: transform 0.1s, opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        button:active { transform: scale(0.98); }
+        button:disabled { background: #475569; cursor: not-allowed; }
+        .progress-container { display: none; margin-top: 1.5rem; background: #0f172a; border-radius: 10px; padding: 4px; border: 1px solid #334155; overflow: hidden; }
+        .progress-bar { height: 12px; width: 0%; background: linear-gradient(90deg, #ff2a5f, #ff758c); border-radius: 8px; transition: width 0.3s ease; }
+        #status { margin-top: 1rem; font-size: 0.9rem; color: #94a3b8; word-break: break-word; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Tubex<span>ify</span></h1>
+        <p class="subtitle">Descarga videos en alta calidad de forma rápida</p>
+
+        <div class="input-group">
+            <input type="text" id="videoUrl" placeholder="Pega la URL de YouTube aquí...">
+            <select id="qualitySelect">
+                <option value="best">Máxima Calidad Disponible (4K/1080p)</option>
+                <option value="1080">1080p Full HD</option>
+                <option value="720">720p HD</option>
+                <option value="audio">Solo Audio (MP3)</option>
+            </select>
+            <button id="downloadBtn" onclick="iniciarDescarga()">Descargar Video</button>
+        </div>
+
+        <div class="progress-container" id="progressBox">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        async function iniciarDescarga() {
+            const urlInput = document.getElementById('videoUrl').value.trim();
+            const quality = document.getElementById('qualitySelect').value;
+            const statusDiv = document.getElementById('status');
+            const btn = document.getElementById('downloadBtn');
+            const progressBox = document.getElementById('progressBox');
+            const progressBar = document.getElementById('progressBar');
+
+            if (!urlInput) {
+                statusDiv.innerText = 'Por favor pega una URL de YouTube válida.';
+                return;
+            }
+
+            const downloadId = 'id_' + Math.random().toString(36).substr(2, 9);
+            statusDiv.innerText = 'Iniciando descarga...';
+            btn.disabled = true;
+            progressBox.style.display = 'block';
+            progressBar.style.width = '0%';
+
+            const interval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/progress/${downloadId}`);
+                    const data = await res.json();
+                    if (data.progress > 0) {
+                        progressBar.style.width = data.progress + '%';
+                        statusDiv.innerText = `Descargando... ${data.progress}%`;
+                    }
+                } catch (e) {}
+            }, 500);
+
+            try {
+                const response = await fetch('/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: urlInput, quality: quality, download_id: downloadId })
+                });
+
+                clearInterval(interval);
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || 'Error en la descarga');
+                }
+
+                progressBar.style.width = '100%';
+                statusDiv.innerText = 'Procesando archivo final...';
+
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = quality === 'audio' ? 'audio.mp3' : 'video.mp4';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+
+                statusDiv.innerText = '¡Descarga completada!';
+            } catch (error) {
+                clearInterval(interval);
+                statusDiv.innerText = error.message;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

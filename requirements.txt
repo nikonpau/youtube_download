@@ -1,0 +1,4 @@
+Flask
+yt-dlp
+yt-dlp-get-pot
+gunicorn

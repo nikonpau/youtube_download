@@ -61,13 +61,9 @@ def download_video():
         'progress_hooks': [lambda d: progress_hook(d, download_id)],
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'ios'],
+                'player_client': ['mweb', 'ios'],
                 'skip': ['webpage', 'configs']
             }
-        },
-        'http_headers': {
-            'User-Agent': 'com.google.android.youtube/18.11.34 (Linux; U; Android 11; en_US) gzip',
-            'Accept-Language': 'en-US,en;q=0.9',
         }
     }
 

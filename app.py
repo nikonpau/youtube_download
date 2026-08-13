@@ -61,13 +61,13 @@ def download_video():
         'progress_hooks': [lambda d: progress_hook(d, download_id)],
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'ios', 'web_embedded'],
+                'player_client': ['web_creator', 'android', 'ios'],
                 'player_skip': ['configs', 'webpage']
             }
         },
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
-            'Accept-Language': 'en-US,en;q=0.9',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+            'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
         }
     }
 

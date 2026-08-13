@@ -61,8 +61,8 @@ def download_video():
         'progress_hooks': [lambda d: progress_hook(d, download_id)],
         'extractor_args': {
             'youtube': {
-                'player_client': ['web_creator', 'android', 'ios'],
-                'player_skip': ['configs', 'webpage']
+                'player_client': ['web_embedded', 'android'],
+                'po_token': ['web_embedded+auto']
             }
         },
         'http_headers': {

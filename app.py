@@ -1,6 +1,6 @@
 import os
-import requests
 from flask import Flask, render_template, request, send_file, jsonify
+import yt_dlp
 
 app = Flask(__name__)
 
@@ -8,61 +8,60 @@ app = Flask(__name__)
 def index():
     return render_template('index.html')
 
-@app.route('/progress/<download_id>')
-def get_progress(download_id):
-    # Con la API externa no hay barra de progreso por bloques, 
-    # simulamos un 100% inmediato al responder
-    return jsonify({'progress': 100})
-
 @app.route('/download', methods=['POST'])
 def download_video():
-    data = request.get_json()
+    data = request.get_json() or {}
     url = data.get('url')
     quality = data.get('quality', 'best')
 
     if not url:
         return jsonify({'error': 'Por favor introduce una URL válida.'}), 400
 
-    # Mapeo de calidad para la API
-    v_quality = '1080'
-    if quality == '720':
-        v_quality = '720'
-    elif quality == 'audio':
-        v_quality = 'audio'
+    # Configuración de extracción según la opción seleccionada
+    if quality == 'audio':
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'quiet': True,
+            'no_warnings': True,
+        }
+    elif quality == '720':
+        ydl_opts = {
+            'format': 'best[height<=720]/best',
+            'quiet': True,
+            'no_warnings': True,
+        }
+    elif quality == '1080':
+        ydl_opts = {
+            'format': 'best[height<=1080]/best',
+            'quiet': True,
+            'no_warnings': True,
+        }
+    else:
+        ydl_opts = {
+            'format': 'best',
+            'quiet': True,
+            'no_warnings': True,
+        }
 
     try:
-        # Petición a la API externa para esquivar el bloqueo de IP
-        response = requests.post(
-            'https://api.cobalt.tools/api/json',
-            headers={
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-            json={
-                'url': url,
-                'vQuality': v_quality,
-                'isAudioOnly': True if quality == 'audio' else False
-            }
-        )
-        
-        result = response.json()
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            download_url = info.get('url')
 
-        # Si nos devuelve una URL directa para descargar
-        if result.get('status') in ['stream', 'redirect', 'tunnel']:
-            return jsonify({'download_url': result.get('url')})
-        elif result.get('status') == 'picker':
-            # Si hay múltiples archivos (ej. lista/playlist), cogemos el primero
-            picker_items = result.get('picker', [])
-            if picker_items:
-                return jsonify({'download_url': picker_items[0].get('url')})
-            return jsonify({'error': 'No se encontró un enlace válido.'}), 400
-        else:
-            return jsonify({'error': 'No se pudo procesar el video. Inténtalo de nuevo.'}), 400
+            if not download_url:
+                # Si es un formato de múltiples flujos, obtenemos el directo
+                formats = info.get('formats', [])
+                if formats:
+                    download_url = formats[-1].get('url')
+
+            if download_url:
+                return jsonify({'download_url': download_url})
+            else:
+                return jsonify({'error': 'No se pudo generar el enlace de descarga.'}), 400
 
     except Exception as e:
-        return jsonify({'error': f'Error en el servidor: {str(e)}'}), 500
+        return jsonify({'error': f'Error al procesar el video: {str(e)}'}), 500
 
-# --- RUTA PARA EL SERVICE WORKER DE OUTPUSH ---
 @app.route('/sw.js')
 def service_worker():
     return send_file('sw.js', mimetype='application/javascript')
